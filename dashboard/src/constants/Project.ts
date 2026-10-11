@@ -1,0 +1,5 @@
+export const REPO_URL = import.meta.env.VITE_REPO_URL || 'https://github.com/HirkanPanel/panel'
+export const ORGANIZATION_URL = 'https://t.me/dev_vexel'
+export const DONATION_URL = 'https://t.me/dev_vexel'
+export const DISCUSSION_GROUP = 'https://t.me/dev_vexel'
+export const DOCUMENTATION = 'https://github.com/HirkanPanel/panel/tree/main/docs/guides'

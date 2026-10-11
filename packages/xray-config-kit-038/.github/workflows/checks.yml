@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Prepare Xray Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      xray-matrix: ${{ steps.matrix.outputs.xray-matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Xray matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          matrix="$(tr -d '\n' < .github/xray-ci-matrix.json)"
+          echo "xray-matrix=${matrix}" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Typecheck, Build, Test (${{ matrix.xray-release }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.xray-matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Xray
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="${{ matrix.xray-release }}"
+          if [ "$release" = "latest" ]; then
+            release="$(curl -fsSL https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r '.tag_name')"
+          fi
+          curl -fsSLo /tmp/xray.zip "https://github.com/XTLS/Xray-core/releases/download/${release}/Xray-linux-64.zip"
+          unzip -q /tmp/xray.zip -d /tmp/xray
+          chmod +x /tmp/xray/xray
+          echo "XRAY_BINARY=/tmp/xray/xray" >> "$GITHUB_ENV"
+          echo "XRAY_VERSION=${release#v}" >> "$GITHUB_ENV"
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+
+      - name: Test
+        run: bun run test

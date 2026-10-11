@@ -1,0 +1,180 @@
+"""
+Hirkan Node Bridge
+
+A Python library for interfacing with Hirkan nodes via gRPC or REST protocols.
+This library abstracts communication with Hirkan nodes, allowing for
+user management, proxy configuration, and health monitoring through a unified interface.
+
+Features:
+- Support for both gRPC and REST connections
+- SSL/TLS secure communication
+- High-level API for common node operations
+- Extensible with custom metadata via the `extra` argument
+
+Author: Hirkan
+Version: 0.9.1
+"""
+
+__version__ = "0.9.1"
+__author__ = "Hirkan"
+
+
+from enum import Enum
+
+from HirkanNodeBridge.abstract_node import HirkanNode
+from HirkanNodeBridge.controller import Health, NodeAPIError
+from HirkanNodeBridge.grpclib import Node as GrpcNode
+from HirkanNodeBridge.rest import Node as RestNode
+from HirkanNodeBridge.storage import (
+    ClaimedUser,
+    InMemoryNodeLifecycleCoordinator,
+    InMemoryNodeRegistry,
+    InMemoryUserSyncStore,
+    LifecycleLease,
+    LifecycleOperation,
+    LifecycleStatus,
+    NodeConfig,
+    NodeLifecycleCoordinatorProtocol,
+    NodeLifecycleState,
+    NodeRegistryProtocol,
+    UserSyncStoreProtocol,
+)
+from HirkanNodeBridge.utils import create_proxy, create_user
+
+
+class NodeType(str, Enum):
+    grpc = "grpc"
+    rest = "rest"
+
+
+def create_node(
+    connection: NodeType,
+    address: str,
+    port: int,
+    server_ca: str,
+    api_key: str,
+    **kwargs,
+) -> HirkanNode:
+    """
+    Create and initialize a Hirkan node instance using the specified connection type.
+
+    This function abstracts the creation of either a gRPC-based or REST-based node,
+    handling the underlying setup and returning a ready-to-use node object.
+
+    Args:
+        connection (NodeType): Type of node connection. Must be `NodeType.grpc` or `NodeType.rest`.
+        address (str): IP address or domain name of the node.
+        port (int): Port number used to connect to the node.
+        server_ca (str): The server's SSL certificate as a string (PEM format).
+        api_key (str): API key used for authentication with the node.
+        **kwargs: Additional optional arguments:
+            - name (str): Node instance name for logging. Defaults to "default".
+            - extra (dict): Optional dictionary to pass custom metadata or configuration. Defaults to {}.
+            - logger (logging.Logger): Custom logger instance. If None, a default logger is created.
+            - default_timeout (int): Default timeout in seconds for public API methods. Defaults to 10.
+            - internal_timeout (int): Default timeout in seconds for internal operations. Defaults to 15.
+            - proxy (str): Optional upstream proxy URL. Supports socks4, socks4a, socks5, socks5h,
+              http, and https URL forms with or without credentials.
+
+    Returns:
+        HirkanNode: An initialized node instance ready for API operations.
+
+    Raises:
+        ValueError: If the provided connection type is invalid.
+        NodeAPIError: If the node connection or initialization fails.
+
+    Examples:
+        >>> # Basic usage with defaults
+        >>> node = create_node(
+        ...     connection=NodeType.grpc,
+        ...     address="172.27.158.135",
+        ...     port=2096,
+        ...     server_ca=server_ca_content,
+        ...     api_key=api_key,
+        ... )
+        >>>
+        >>> # With custom timeouts
+        >>> node = create_node(
+        ...     connection=NodeType.grpc,
+        ...     address="172.27.158.135",
+        ...     port=2096,
+        ...     server_ca=server_ca_content,
+        ...     api_key=api_key,
+        ...     default_timeout=30,
+        ...     internal_timeout=20,
+        ... )
+
+    Note:
+        - SSL certificate values should be passed as strings, not file paths.
+        - Use `extra` to inject any environment-specific settings or context.
+        - Timeout values can be overridden per-call in individual API methods.
+        - `https://` proxies are supported for aiohttp-based requests; gRPC transport supports
+          HTTP CONNECT and SOCKS proxy schemes.
+    """
+
+    if connection is NodeType.grpc:
+        return GrpcNode(
+            address=address,
+            port=port,
+            server_ca=server_ca,
+            api_key=api_key,
+            **kwargs,
+        )
+
+    elif connection is NodeType.rest:
+        return RestNode(
+            address=address,
+            port=port,
+            server_ca=server_ca,
+            api_key=api_key,
+            **kwargs,
+        )
+
+    else:
+        raise ValueError("invalid backend type")
+
+
+def create_node_from_config(config: NodeConfig, **runtime_overrides) -> HirkanNode:
+    data = config.to_dict()
+    data.update(runtime_overrides)
+    connection = NodeType(data.pop("connection"))
+    return create_node(connection=connection, **data)
+
+
+async def save_node_config(registry: NodeRegistryProtocol, node_id: str, config: NodeConfig) -> None:
+    await registry.upsert_node(node_id, config)
+
+
+async def create_node_from_registry(
+    registry: NodeRegistryProtocol, node_id: str, **runtime_overrides
+) -> HirkanNode:
+    config = await registry.get_node(node_id)
+    if config is None:
+        raise KeyError(f"Node config not found: {node_id}")
+    return create_node_from_config(config, node_id=node_id, **runtime_overrides)
+
+
+__all__ = [
+    "ClaimedUser",
+    "Health",
+    "InMemoryNodeLifecycleCoordinator",
+    "InMemoryNodeRegistry",
+    "InMemoryUserSyncStore",
+    "LifecycleLease",
+    "LifecycleOperation",
+    "LifecycleStatus",
+    "NodeAPIError",
+    "NodeConfig",
+    "NodeLifecycleCoordinatorProtocol",
+    "NodeLifecycleState",
+    "NodeRegistryProtocol",
+    "NodeType",
+    "HirkanNode",
+    "UserSyncStoreProtocol",
+    "create_node",
+    "create_node_from_config",
+    "create_node_from_registry",
+    "create_proxy",
+    "create_user",
+    "save_node_config",
+]

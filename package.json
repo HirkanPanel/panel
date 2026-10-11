@@ -1,0 +1,12 @@
+{
+  "name": "hirkan-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "dashboard",
+    "packages/core-kit",
+    "packages/xray-config-kit",
+    "packages/xray-config-kit-038",
+    "packages/wireguard-config-kit"
+  ]
+}

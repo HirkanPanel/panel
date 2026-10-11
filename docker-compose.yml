@@ -1,0 +1,11 @@
+services:
+  hirkan:
+    build: .
+    image: hirkan/panel:1.0.0
+    restart: always
+    env_file: .env
+    environment:
+      SQLALCHEMY_DATABASE_URL: ${SQLALCHEMY_DATABASE_URL:-sqlite+aiosqlite:////var/lib/hirkan/db.sqlite3}
+    network_mode: host
+    volumes:
+      - ./data:/var/lib/hirkan

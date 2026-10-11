@@ -1,0 +1,48 @@
+[project]
+name = "hirkan-node-bridge"
+version = "0.9.1"
+description = "python package to connect your project with Hirkan node go"
+url = "https://github.com/HirkanPanel/panel/tree/main/packages/node-bridge"
+keywords = [
+    "Hirkan-Node",
+    "Hirkan",
+    "Hirkan-panel",
+    "Hirkan python",
+    "Hirkan API",
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.13.5",
+    "aiohttp-socks>=0.11.0",
+    "grpclib>=0.4.9",
+    "packaging>=26.2",
+    "protobuf>=6.33.6",
+    "python-socks[asyncio]>=2.8.1",
+]
+
+classifiers = ["Programming Language :: Python :: 3.12"]
+
+[project.urls]
+Homepage = "https://github.com/HirkanPanel/panel/tree/main/packages/node-bridge"
+Repository = "https://github.com/HirkanPanel/panel/tree/main/packages/node-bridge"
+
+[dependency-groups]
+dev = ["grpcio-tools>=1.80.0"]
+
+[tool.ruff]
+line-length = 120
+exclude = ["HirkanNodeBridge/common"]
+
+[tool.ruff.lint]
+ignore = [
+    "N999",   # package is named HirkanNodeBridge to match the published API/import name
+    "BLE001", # this is a network client library; boundaries must catch arbitrary grpc/aiohttp/ssl errors
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["HirkanNodeBridge"]

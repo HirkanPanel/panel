@@ -1,0 +1,8 @@
+node_modules/
+dist/
+tests/.tmp/
+*.tgz
+
+# Bundled release output is used by the dashboard workspace.
+!dist/
+!dist/**

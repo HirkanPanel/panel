@@ -1,0 +1,28 @@
+services:
+  node:
+    build: .
+    image: hirkan/node:1.0.0
+    restart: always
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    # WireGuard in this image uses the Linux kernel interface.
+    # The host must have WireGuard kernel support available (for example: modprobe wireguard).
+
+    environment:
+      SERVICE_PORT: 62050
+      SERVICE_PROTOCOL: "grpc"
+      # Linux: enable runtime IPv4 forwarding and install scoped nftables NAT/forwarding rules.
+      # NAT egress is auto-detected (ip route / /proc/net/route); set HIRKAN_NODE_WG_NAT_OUTPUT_INTERFACE to override (e.g. eth0, ens192).
+      # For Xray TUN egress (no NAT) set HIRKAN_NODE_WG_NAT_DISABLE=1 and HIRKAN_NODE_WG_ROUTE_TABLE / HIRKAN_NODE_WG_ROUTE_OUT_INTERFACE (e.g. xray0). See .env.example.
+      HIRKAN_NODE_WG_HOST_ROUTING: "1"
+
+      SSL_CERT_FILE: "/var/lib/hirkan-node/certs/ssl_cert.pem"
+      SSL_KEY_FILE: "/var/lib/hirkan-node/certs/ssl_key.pem"
+      # api key must be a valid uuid (you can use any version you want)
+      API_KEY: ${HIRKAN_NODE_API_KEY:?Set HIRKAN_NODE_API_KEY to a UUID in .env}
+
+      GENERATED_CONFIG_PATH: "/var/lib/hirkan-node/generated"
+
+    volumes:
+      - ./data:/var/lib/hirkan-node

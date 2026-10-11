@@ -130,6 +130,13 @@ def validate(kind,data,creating=False):
   if not 1<=port<=65535:raise HTTPException(422,'Invalid port')
   data['port']=port
   if data.get('protocol','vless') not in ['vless','vmess','trojan','shadowsocks']:raise HTTPException(422,'Unsupported protocol')
+ if kind=='templates':
+  config=data.get('config',{})
+  permitted={'data_limit','status','reset_period','group_ids','inbound_tags','note','flow','duration_days'}
+  if not isinstance(config,dict) or set(config)-permitted:raise HTTPException(422,'Invalid template configuration')
+  if 'duration_days' in config:
+   days=config['duration_days']
+   if not isinstance(days,int) or isinstance(days,bool) or not 1<=days<=36500:raise HTTPException(422,'Invalid duration_days')
  if kind=='cores':
   if data.get('type','xray')!='xray':raise HTTPException(422,'This release supports Xray cores')
   if not isinstance(data.get('config',{}),dict):raise HTTPException(422,'Core config must be JSON object')
@@ -375,6 +382,10 @@ def create_object(kind:str,data:dict,admin=Depends(current)):
  allow(admin,True)
  if kind not in RESOURCES:raise HTTPException(404)
  if kind in ['settings','roles'] and admin['role']!='administrator':raise HTTPException(403,'Administrator required')
+ if kind=='users' and data.get('template_id'):
+  template=get('templates',data['template_id']);preset=dict(template.get('config',{}));days=preset.pop('duration_days',None)
+  if days:preset['expire']=int(time.time())+days*86400
+  data={**preset,**{k:v for k,v in data.items() if k!='template_id'}}
  data=validate(kind,data,True)
  if kind=='settings' and admin['role']!='administrator':raise HTTPException(403)
  result=save(kind,data);audit(admin['username'],kind+'.create',result['id']);return result

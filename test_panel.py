@@ -114,3 +114,16 @@ def test_assets_and_health(panel):
  assert c.get('/assets/logo-light.png').content.startswith(b'\x89PNG')
  assert c.get('/assets/logo-dark.png').content.startswith(b'\x89PNG')
  assert c.get('/assets/main.py').status_code==404
+
+
+def test_template_provisions_user_with_fresh_credentials(panel):
+ c,m=panel
+ preset=c.post('/api/templates',json={'name':'weekly','config':{'data_limit':1024,'duration_days':7,'reset_period':'weekly'}})
+ assert preset.status_code==200
+ u=user(c,template_id=preset.json()['id'])
+ assert u['data_limit']==1024 and u['reset_period']=='weekly'
+ assert 6*86400<u['expire']-time.time()<=7*86400
+ v=user(c,'bob',template_id=preset.json()['id'],data_limit=2048)
+ assert v['data_limit']==2048 and v['uuid']!=u['uuid'] and v['subscription_token']!=u['subscription_token']
+ assert c.post('/api/templates',json={'name':'bad','config':{'uuid':'shared'}}).status_code==422
+ assert c.post('/api/templates',json={'name':'bad','config':{'duration_days':-1}}).status_code==422

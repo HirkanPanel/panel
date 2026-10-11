@@ -1,0 +1,19 @@
+[Unit]
+Description=Hirkan node agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hirkan
+WorkingDirectory=/opt/hirkan
+EnvironmentFile=/etc/hirkan-node.env
+ExecStart=/opt/hirkan/.venv/bin/python /opt/hirkan/agent.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
